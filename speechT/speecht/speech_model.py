@@ -194,7 +194,7 @@ j
 
     self.summary_writer.add_graph(sess.graph)
 
-  def step(self, sess, loss=True, update=True, decode=False, return_label=False, summary=False, feed_dict=None):
+  def step(self, sess, loss=True, update=True, decode=False, return_label=False, summary=False, identity=False, feed_dict=None):
     """
     Evaluate the graph, you may update weights, decode audio or generate a summary
 
@@ -212,6 +212,9 @@ j
     """
 
     output_feed = []
+
+    if identity:
+      output_feed.append(tf.identity(self.logits))
 
     if loss:
       output_feed.append(self.avg_loss)
@@ -282,14 +285,14 @@ class Wav2LetterModel(SpeechModel):
       outputs, channels = self._convolution(outputs, 7, 1, channels, channels)
 
     # 1 layer with high kernel width and output size [batch_size, max_time / 2, 2000]
-    outputs, channels = self._convolution(outputs, 32, 1, channels, channels * 8)
+    #outputs, channels = self._convolution(outputs, 32, 1, channels, channels * 8)
 
     # 1 fully connected layer of output size [batch_size, max_time / 2, 2000]
-    outputs, channels = self._convolution(outputs, 1, 1, channels, channels)
+    #outputs, channels = self._convolution(outputs, 1, 1, channels, channels)
 
     # 1 fully connected layer of output size [batch_size, max_time / 2, num_classes]
     # We must not apply a non linearity in this last layer
-    outputs, channels = self._convolution(outputs, 1, 1, channels, num_classes, False)
+    #outputs, channels = self._convolution(outputs, 1, 1, channels, num_classes, False)
 
     # transpose logits to size [max_time / 2, batch_size, num_classes]
     return tf.transpose(outputs, (1, 0, 2))

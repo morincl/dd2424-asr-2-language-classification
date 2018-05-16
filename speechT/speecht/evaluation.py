@@ -104,7 +104,8 @@ class Evaluation(DatasetExecutor):
             break
 
           should_save = self.flags.should_save and step == 0
-          self.run_step(model, sess, stats, should_save)
+          import pdb; pdb.set_trace()
+          self.run_step(model, sess, stats, False, output_file=self.flags.output_file)
 
       except tf.errors.OutOfRangeError:
         print('Done evaluating -- step limit reached')
@@ -124,38 +125,40 @@ class Evaluation(DatasetExecutor):
                                                            stats.global_word_error_rate))
 
   def run_step(self, model: SpeechModel, sess: tf.Session, stats: EvalStatistics,
-               save: bool, verbose=True, feed_dict: Dict=None):
+               save: bool, decode=False, verbose=False, output_file="nofile", feed_dict: Dict=None):
     global_step = model.global_step.eval()
 
     # Validate on data set and write summary
     if save:
-      avg_loss, decoded, label, summary = model.step(sess, update=False, decode=True, return_label=True,
-                                                     summary=True, feed_dict=feed_dict)
+      output, summary = model.step(sess, loss=False, update=False, decode=False, return_label=False, summary=True, identity=True, feed_dict=feed_dict)
       model.summary_writer.add_summary(summary, global_step)
     else:
-      avg_loss, decoded, label = model.step(sess, update=False, decode=True,
-                                            return_label=True, feed_dict=feed_dict)
+      output, summary = model.step(sess, loss=False, update=False, decode=False, return_label=False, summary=True, identity=True, feed_dict=feed_dict)
+
+    if output_file != "nofile":
+      np.save(output_file, output)
 
     if verbose:
       perplexity = np.exp(float(avg_loss)) if avg_loss < 300 else float("inf")
       print("validation average loss {:.2f} perplexity {:.2f}".format(avg_loss, perplexity))
 
-    # Print decode
-    decoded_ids_paths = [Evaluation.extract_decoded_ids(path) for path in decoded]
-    for label_ids in Evaluation.extract_decoded_ids(label):
-      expected_str = speecht.vocabulary.ids_to_sentence(label_ids)
-      if verbose:
-        print('expected: {}'.format(expected_str))
-      for decoded_path in decoded_ids_paths:
-        decoded_ids = next(decoded_path)
-        decoded_str = speecht.vocabulary.ids_to_sentence(decoded_ids)
-        stats.track_decoding(decoded_str, expected_str)
+    if decode:
+      # Print decode
+      decoded_ids_paths = [Evaluation.extract_decoded_ids(path) for path in decoded]
+      for label_ids in Evaluation.extract_decoded_ids(label):
+        expected_str = speecht.vocabulary.ids_to_sentence(label_ids)
         if verbose:
-          print('decoded: {}'.format(decoded_str))
-          print('LED: {} LER: {:.2f} WED: {} WER: {:.2f}'.format(stats.letter_edit_distance,
-                                                                 stats.letter_error_rate,
-                                                                 stats.word_edit_distance,
-                                                                 stats.word_error_rate))
+          print('expected: {}'.format(expected_str))
+        for decoded_path in decoded_ids_paths:
+          decoded_ids = next(decoded_path)
+          decoded_str = speecht.vocabulary.ids_to_sentence(decoded_ids)
+          stats.track_decoding(decoded_str, expected_str)
+          if verbose:
+            print('decoded: {}'.format(decoded_str))
+            print('LED: {} LER: {:.2f} WED: {} WER: {:.2f}'.format(stats.letter_edit_distance,
+                                                                   stats.letter_error_rate,
+                                                                   stats.word_edit_distance,
+                                                                   stats.word_error_rate))
 
   @staticmethod
   def extract_decoded_ids(sparse_tensor):

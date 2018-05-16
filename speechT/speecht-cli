@@ -104,6 +104,8 @@ class CLI:
                                    help='Do not save evaluation')
     evaluation_parser.add_argument('--step-count', dest='step_count', type=int, default=0,
                                    help='Number of steps to evaluate')
+    evaluation_parser.add_argument('--output-file', dest='output_file', type=str, default="nofile",
+                                   help='Number of steps to evaluate')
     self._add_language_model_argument(evaluation_parser)
     evaluation_parser.set_defaults(dataset='test')
 
@@ -124,7 +126,7 @@ class CLI:
                         help='Preprocess only test data')
     preprocess_parser.add_argument('--dev-only', dest='dev_only', action='store_true',
                         help='Preprocess only development data')
-    
+
 
   def _add_parameter_search_parser(self):
     parameter_search_parser = self.subparsers.add_parser('search', help='Search for language model hyper parameters'

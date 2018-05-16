@@ -50,7 +50,7 @@ def calc_power_spectrogram(audio_data, samplerate, n_mels=128, n_fft=512, hop_le
   spectrogram = librosa.feature.melspectrogram(audio_data, sr=samplerate, n_mels=n_mels, n_fft=n_fft, hop_length=hop_length)
 
   # convert to log scale (dB)
-  log_spectrogram = librosa.logamplitude(spectrogram, ref_power=np.max)
+  log_spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max)
 
   # normalize
   normalized_spectrogram = normalize(log_spectrogram)
@@ -286,7 +286,10 @@ class Preprocessing:
 
   def run(self):
     corpus = SpeechCorpusProvider(self.flags.data_dir)
-    corpus.ensure_availability()
+    if self.flags.test_only is not None:
+        corpus.ensure_availability(self.flags.test_only)
+    else:
+        corpus.ensure_availability()
     corpus_reader = SpeechCorpusReader(self.flags.data_dir)
 
     if self.flags.feature_type == 'mfcc':
