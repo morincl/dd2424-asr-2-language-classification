@@ -100,14 +100,19 @@ class CLI:
                                    help='Use the development dataset.')
     evaluation_parser.add_argument('--test', dest='dataset', action='store_const', const='test',
                                    help='Use the test dataset.')
+    evaluation_parser.add_argument('--custom-dataset', dest='dataset', type=str, default="test",
+                                   help='Folder name of custom dataset folder')
+    evaluation_parser.add_argument('--dataset-abs-path', dest='use_abs_path', action='store_true',
+                                   help='Use absolute path to the dataset.')
     evaluation_parser.add_argument('--no-save', dest='should_save', action='store_false',
                                    help='Do not save evaluation')
     evaluation_parser.add_argument('--step-count', dest='step_count', type=int, default=0,
                                    help='Number of steps to evaluate')
     evaluation_parser.add_argument('--output-file', dest='output_file', type=str, default="nofile",
-                                   help='Number of steps to evaluate')
+                                   help='Base output file path')
     self._add_language_model_argument(evaluation_parser)
     evaluation_parser.set_defaults(dataset='test')
+    evaluation_parser.set_defaults(use_abs_path=False)
 
   def _add_recording_parser(self):
     recording_parser = self.subparsers.add_parser('record', help='Record using your microphone and inspect '

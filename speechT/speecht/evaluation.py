@@ -71,7 +71,8 @@ class Evaluation(DatasetExecutor):
     return self.reader.load_samples(self.flags.dataset,
                                     loop_infinitely=False,
                                     limit_count=limit_count,
-                                    feature_type=self.flags.feature_type)
+                                    feature_type=self.flags.feature_type,
+                                    use_abs_path=self.flags.use_abs_path)
 
   def get_loader_limit_count(self):
     return self.flags.step_count * self.flags.batch_size
@@ -82,8 +83,6 @@ class Evaluation(DatasetExecutor):
     return None
 
   def run(self):
-
-    stats = EvalStatistics()
 
     with tf.Session() as sess:
 
@@ -103,17 +102,12 @@ class Evaluation(DatasetExecutor):
           if coord.should_stop():
             break
 
-          should_save = self.flags.should_save and step == 0
-          import pdb; pdb.set_trace()
-          self.run_step(model, sess, stats, False, output_file=self.flags.output_file)
+          self.run_step(model, sess, None, False, output_file=self.flags.output_file + str(step) + ".npy")
 
       except tf.errors.OutOfRangeError:
         print('Done evaluating -- step limit reached')
       finally:
         coord.request_stop()
-
-      self.print_global_statistics(stats)
-
       coord.join()
 
   @staticmethod
@@ -128,12 +122,13 @@ class Evaluation(DatasetExecutor):
                save: bool, decode=False, verbose=False, output_file="nofile", feed_dict: Dict=None):
     global_step = model.global_step.eval()
 
-    # Validate on data set and write summary
+    # This file has been pretty badly slaughtered...
+    # If we have more time, these changes should be moved to a separate dataset executor and the original file should be restored
     if save:
-      output, summary = model.step(sess, loss=False, update=False, decode=False, return_label=False, summary=True, identity=True, feed_dict=feed_dict)
+      output = model.step(sess, loss=False, update=False, decode=False, return_label=False, summary=False, identity=True, feed_dict=feed_dict)
       model.summary_writer.add_summary(summary, global_step)
     else:
-      output, summary = model.step(sess, loss=False, update=False, decode=False, return_label=False, summary=True, identity=True, feed_dict=feed_dict)
+      output = model.step(sess, loss=False, update=False, decode=False, return_label=False, summary=False, identity=True, feed_dict=feed_dict)
 
     if output_file != "nofile":
       np.save(output_file, output)
@@ -152,7 +147,7 @@ class Evaluation(DatasetExecutor):
         for decoded_path in decoded_ids_paths:
           decoded_ids = next(decoded_path)
           decoded_str = speecht.vocabulary.ids_to_sentence(decoded_ids)
-          stats.track_decoding(decoded_str, expected_str)
+          #stats.track_decoding(decoded_str, expected_str)
           if verbose:
             print('decoded: {}'.format(decoded_str))
             print('LED: {} LER: {:.2f} WED: {} WER: {:.2f}'.format(stats.letter_edit_distance,

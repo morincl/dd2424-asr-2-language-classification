@@ -196,13 +196,15 @@ class SpeechCorpusReader:
       audio_id, audio_fragments = self._transform_sample(audio_file, preprocess_fnc)
       yield audio_id, audio_fragments, transcript_dict[audio_id]
 
-  def _get_directory(self, feature_type, sub_directory):
+  def _get_directory(self, feature_type, sub_directory, use_abs_path=False):
     preprocess_directory = 'preprocessed'
     if feature_type == calc_power_spectrogram or feature_type == 'power':
       preprocess_directory += '-power'
 
-    directory = self._data_directory + '/' + preprocess_directory + '/' + sub_directory
-
+    if use_abs_path == True:
+        directory = sub_directory
+    else:
+        directory = self._data_directory + '/' + preprocess_directory + '/' + sub_directory
     return directory
 
   @classmethod
@@ -240,7 +242,7 @@ class SpeechCorpusReader:
       pool.close()
       pool.join()
 
-  def load_samples(self, directory, max_size=False, loop_infinitely=False, limit_count=0, feature_type='mfcc'):
+  def load_samples(self, directory, max_size=False, loop_infinitely=False, limit_count=0, feature_type='mfcc', use_abs_path=False):
     """
     Load the preprocessed samples from `directory` and return an iterator
 
@@ -255,7 +257,7 @@ class SpeechCorpusReader:
 
     """
 
-    load_directory = self._get_directory(feature_type, directory)
+    load_directory = self._get_directory(feature_type, directory, use_abs_path)
 
     if not os.path.exists(load_directory):
       raise ValueError('Directory {} does not exist'.format(load_directory))
