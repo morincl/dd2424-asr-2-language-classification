@@ -131,7 +131,7 @@ class Evaluation(DatasetExecutor):
       output = model.step(sess, loss=False, update=False, decode=False, return_label=False, summary=False, identity=True, feed_dict=feed_dict)
 
     if output_file != "nofile":
-      np.save(output_file, output)
+      np.save(output_file, output[0])
 
     if verbose:
       perplexity = np.exp(float(avg_loss)) if avg_loss < 300 else float("inf")
