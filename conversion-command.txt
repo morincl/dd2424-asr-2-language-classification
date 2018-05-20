@@ -1,1 +1,1 @@
-./speecht-cli evaluate --custom-dataset /media/karl/Elements/DeepLearningProject/VoxForge/power-speechT --dataset-abs-path --output-file /media/karl/Elements/DeepLearningProject/test/test --step-count 0 --batch-size 1000 --run-name best_run 
+./speecht-cli evaluate --custom-dataset /media/karl/Elements/DeepLearningProject/VoxForge/power-speechT/French --dataset-abs-path --output-file /media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/French/batch --step-count 0 --batch-size 1000 --run-name best_run

@@ -38,16 +38,27 @@ validation_set = next(data_generator)[0:125, :, :]
 for j in range(1):
     validation_set = np.concatenate([validation_set, next(data_generator)[0:125, :, :]])
 
+<<<<<<< 4d7ec292fe136e25e399f2bced7930a46b9c05b0
 # normalize
+=======
+mean_and_std = np.zeros([dataset.shape[2], 2])
+
+>>>>>>> checked in conversion commands and removed mean from auto-encoder normalization
 for i in range(dataset.shape[2]):
-    mean = np.mean(dataset[:, :, i])
-    std = np.std(dataset[:, :, i])
-    dataset[:, :, i] = (dataset[:, :, i] - mean) / std
+    #mean = np.mean(dataset[:,:,i])
+    mean = 0
+    std = np.std(dataset[:,:,i])
+    dataset[:,:,i] = (dataset[:,:,i] - mean) / std
+    mean_and_std[i, 0] = mean
+    mean_and_std[i, 1] = std
 
 for i in range(validation_set.shape[2]):
-    mean = np.mean(validation_set[:, :, i])
+    #mean = np.mean(validation_set[:, :, i])
+    mean = 0
     std = np.std(validation_set[:, :, i])
     validation_set[:, :, i] = (validation_set[:, :, i] - mean) / std
+
+np.save('mean_and_std_no_mean.npy', mean_and_std)
 
 print(dataset.shape)
 
@@ -207,7 +218,7 @@ with tf.Session() as sess:
         # Display logs per step
         if i % display_step == 0 or i == 1:
             print('Step %i: Minibatch Loss: %f' % (i, np.sqrt(l)))
-            validation_loss = sess.run([loss], feed_dict={X: validation_set})
+            validation_loss = sess.run(loss, feed_dict={X: validation_set})
             print("val loss: " + str(np.sqrt(validation_loss)))
             print("Best known loss: " + str(best_known_loss))
             if np.sqrt(validation_loss) < best_known_loss:
@@ -216,6 +227,17 @@ with tf.Session() as sess:
                 save_path = saver.save(sess,
                                        "/media/karl/Elements/DeepLearningProject/auto-encoder/" + model_name + "/auto-enc.ckpt")
                 print("Model saved in path: %s" % save_path)
+
+                input_array = np.reshape(dataset[0, 100, :], (1, 250))
+                decoded = sess.run(decoder, feed_dict={X: input_array})
+
+                print("Input array:")
+                print(input_array[0, 0:15])
+                print("Decoded:")
+                print(decoded[0, 0:15])
+                print("Diff:")
+                print(decoded[0, 0:15] - input_array[0, 0:15])
+
 
     validation_loss = sess.run([loss], feed_dict={X: validation_set})
     print("Final validation loss: " + str(np.sqrt(validation_loss)))
