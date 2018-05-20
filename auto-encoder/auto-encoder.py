@@ -38,6 +38,7 @@ validation_set = next(data_generator)[0:125, :, :]
 for j in range(1):
     validation_set = np.concatenate([validation_set, next(data_generator)[0:125, :, :]])
 
+# normalize
 for i in range(dataset.shape[2]):
     mean = np.mean(dataset[:, :, i])
     std = np.std(dataset[:, :, i])
@@ -102,7 +103,7 @@ tf.set_random_seed(1000)
 
 # Training Parameters
 learning_rate = 0.0001
-learning_rate_place_holder = tf.placeholder(tf.float32, shape=[])
+learning_rate_place_holder = tf.placeholder(tf.float32, shape=[], name="learning_rate_place_holder")
 num_steps = 1000000
 batch_size = 250
 
@@ -115,7 +116,7 @@ num_hidden_2 = 1000  # 2st layer num features
 num_hidden_3 = 50  # latent dimension
 
 # tf Graph input (only pictures)
-X = tf.placeholder("float", [None, num_input])
+X = tf.placeholder("float", [None, num_input], name="X")
 
 
 def build_encoder(inputs):
@@ -135,7 +136,7 @@ def build_encoder(inputs):
                                units=num_hidden_3,
                                activation=tf.nn.leaky_relu,
                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                               use_bias=False)
+                               use_bias=False, name="encoder_op")
 
     return encoder3
 
@@ -157,7 +158,7 @@ def build_decoder(inputs):
                                units=num_input,
                                activation=tf.nn.leaky_relu,
                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                               use_bias=False)
+                               use_bias=False, name="decoder_op")
     return decoder3
 
 
@@ -170,8 +171,8 @@ y_pred = decoder
 y_true = X
 
 # Define loss and optimizer, minimize the squared error
-loss = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
-optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+loss = tf.reduce_mean(tf.pow(y_true - y_pred, 2), name="loss_op")
+optimizer = tf.train.AdamOptimizer(learning_rate, name="adam_op").minimize(loss, name="optimizer_op")
 
 # Initialize the variables (i.e. assign their default value)
 init = tf.global_variables_initializer()
