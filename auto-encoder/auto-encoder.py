@@ -1,45 +1,42 @@
 import tensorflow as tf
 import numpy as np
+import math
+
+speechT_output_folder_path = "/media/david/Elements/David/deep/speechT-output/"
+
+
+def get_batch_no_nan(languages=None):
+    """
+    Generator that yields data batches that does not have any NaN:s in them, alternating between the the languages
+    :param languages: list of strings for languages to be loaded
+    :yield: one batch
+    """
+
+    if languages is None:
+        languages = ["English", "French"]
+    i = 0
+    while True:
+        for language in languages:
+            try:
+                batch = np.transpose(np.load(speechT_output_folder_path + "{}/batch{}.npy".format(language, i)),
+                                     [1, 0, 2])
+                if not math.isnan((np.max(batch))):
+                    yield batch
+            except FileNotFoundError:
+                return
+        i += 1
+
 
 # Load data
+data_generator = get_batch_no_nan()
 
-dataset = np.transpose(np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/French/batch0.npy'),
-                       [1, 0, 2])
-# for i in range(1, 10):
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/English/batch1.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/English/batch2.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/French/batch4.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/English/batch5.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/French/batch6.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/English/batch7.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/French/batch11.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/English/batch12.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
-temp_dataset = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/French/batch13.npy'), [1, 0, 2])
-dataset = np.concatenate([dataset, temp_dataset])
+dataset = next(data_generator)
+for j in range(10):
+    dataset = np.concatenate([dataset, next(data_generator)])
 
-validation_set = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/French/batch15.npy'), [1, 0, 2])
-validation_set = validation_set[0:125, :, :]
-validation_set2 = np.transpose(
-    np.load('/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/English/batch15.npy'), [1, 0, 2])
-validation_set = np.concatenate([validation_set, validation_set2[0:125, :, :]])
+validation_set = next(data_generator)[0:125, :, :]
+for j in range(1):
+    validation_set = np.concatenate([validation_set, next(data_generator)[0:125, :, :]])
 
 for i in range(dataset.shape[2]):
     mean = np.mean(dataset[:, :, i])
