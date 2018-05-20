@@ -1,0 +1,6 @@
+model_checkpoint_path: "/media/karl/Elements/DeepLearningProject/auto-encoder/auto-enc-247000-1325/auto-enc.ckpt"
+all_model_checkpoint_paths: "/media/karl/Elements/DeepLearningProject/auto-encoder/auto-enc-230000-1292/auto-enc.ckpt"
+all_model_checkpoint_paths: "/media/karl/Elements/DeepLearningProject/auto-encoder/auto-enc-240000-1319/auto-enc.ckpt"
+all_model_checkpoint_paths: "/media/karl/Elements/DeepLearningProject/auto-encoder/auto-enc-243000-1369/auto-enc.ckpt"
+all_model_checkpoint_paths: "/media/karl/Elements/DeepLearningProject/auto-encoder/auto-enc-245000-1326/auto-enc.ckpt"
+all_model_checkpoint_paths: "/media/karl/Elements/DeepLearningProject/auto-encoder/auto-enc-247000-1325/auto-enc.ckpt"
