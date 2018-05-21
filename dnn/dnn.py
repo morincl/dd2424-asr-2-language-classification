@@ -13,6 +13,8 @@ import os
 import random
 
 frame_cutoff = 100 # How many frames to use per sample
+random_seed = None  # Set this to any number to make random the same all the time (good for parameter optimization)
+# tf.set_random_seed(1)  # Uncomment to make tf use same random seed
 
 # Parameters
 learning_rate = 0.0001
@@ -41,6 +43,7 @@ def load_data(input_path):
         else:
             data = np.concatenate([data, data_batch])
     return data
+
 
 def next_mini_batch(data_list, epoch_callback=None):
     while True:
@@ -96,6 +99,7 @@ def neural_net(x):
                                use_bias=False, name="logits")
     return logits
 
+
 # Construct model
 logits = neural_net(X)
 prediction = tf.nn.softmax(logits, name="prediction")
@@ -114,10 +118,11 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 init = tf.global_variables_initializer()
 
 # Build validation set
+# Set seed=1 to always use the same seed for validation
+random.seed(1)
 
 validation_set_x = None
 validation_set_y = None
-
 validation_generator = next_mini_batch(validation_data)
 for i in range(num_validation_set_minibatches):
     batch_x, batch_y = next(validation_generator)
@@ -127,6 +132,8 @@ for i in range(num_validation_set_minibatches):
     else:
         validation_set_x = batch_x
         validation_set_y = batch_y
+# remove seed (or change to what was used before)
+random.seed(random_seed)
 
 # Start training
 training_generator = next_mini_batch(training_data)
