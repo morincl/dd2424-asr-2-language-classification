@@ -27,26 +27,25 @@ n_hidden_2 = 256  # 2nd layer number of neurons
 num_input = 5000  # MNIST data input (img shape: 28*28)
 num_classes = 2  # MNIST total classes (0-9 digits)
 
-data_folder_path = "/media/david/Elements/David/deep/final_data/labelled/"
+training_data_folder_path = "/media/david/Elements/David/deep/final_data/labelled/test/"
+validation_data_folder_path = "/media/david/Elements/David/deep/final_data/labelled/validation/"
 
-data = None
 
-files = os.listdir(data_folder_path)
-#counter = 0
-for file in files:
-    #if counter > 3:
-   #     break
-    data_batch = np.load(data_folder_path + file)
-    if data is None:
-        data = data_batch
-    else:
-        data = np.concatenate([data, data_batch])
-    #counter += 1
+def load_data(input_path):
+    files = os.listdir(input_path)
+    data = None
+    for file in files:
+        data_batch = np.load(input_path + file)
+        if data is None:
+            data = data_batch
+        else:
+            data = np.concatenate([data, data_batch])
+    return data
 
 
 def next_mini_batch(data_list):
     while True:
-        for i in range(len(data)//minibatch_size):
+        for i in range(len(data_list)//minibatch_size):
             minibatch = data_list[i * minibatch_size:(i + 1) * minibatch_size]
             batch_x = None
             batch_y = None
@@ -54,7 +53,7 @@ def next_mini_batch(data_list):
                 sample_x = sample[0]
                 offset = random.randint(0, 149)
                 flat_and_cut_sample_x = np.reshape(sample_x[offset:frame_cutoff + offset, :],
-                                                 [1, frame_cutoff * sample_x.shape[1]])
+                                                   [1, frame_cutoff * sample_x.shape[1]])
                 if batch_x is None:
                     batch_x = flat_and_cut_sample_x
                 else:
@@ -69,6 +68,9 @@ def next_mini_batch(data_list):
             yield batch_x, batch_y
         print("looped")
 
+
+training_data = load_data(training_data_folder_path)
+validation_data = load_data(validation_data_folder_path)
 
 # tf Graph input
 X = tf.placeholder("float", [None, num_input])
@@ -115,20 +117,24 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 init = tf.global_variables_initializer()
 
 # Start training
-generator = next_mini_batch(data)
+training_generator = next_mini_batch(training_data)
+validation_generator = next_mini_batch(validation_data)  # TODO: HIGH PRIO: this does not good for the validation data, fix
 with tf.Session() as sess:
 
     # Run the initializer
     sess.run(init)
 
     for step in range(1, num_steps+1):
-        batch_x, batch_y = next(generator)
+        batch_x, batch_y = next(training_data)
         # Run optimization op (backprop)
         sess.run(train_op, feed_dict={X: batch_x, Y: batch_y})
         if step % display_step == 0 or step == 1:
             # Calculate batch loss and accuracy
             loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
                                                                  Y: batch_y})
+            #batch_x_val, batch_y_val = next(validation_data)
+            #loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
+                                                                 #Y: batch_y})
             print("Step " + str(step) + ", Minibatch Loss= " + \
                   "{:.4f}".format(loss) + ", Training Accuracy= " + \
                   "{:.3f}".format(acc))
