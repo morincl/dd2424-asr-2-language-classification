@@ -9,19 +9,12 @@ Project: https://github.com/aymericdamien/TensorFlow-Examples/
 """
 import tensorflow as tf
 import numpy as np
+import os
+import random
 
-data_folder_path = "/home/david/Documents/deep/dd2424-asr-2-language-classification/dnn/"
+minibatch_size = 100
+frame_cutoff = 100
 
-data = np.load(data_folder_path + "autoencoded_batch0_english.npy")
-
-
-
-# Import MNIST data
-from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets("data/MNIST/", one_hot=True)
-
-print("asdasd")
-import pdb; pdb.set_trace()
 # Parameters
 learning_rate = 0.1
 num_steps = 500
@@ -31,8 +24,51 @@ display_step = 100
 # Network Parameters
 n_hidden_1 = 256  # 1st layer number of neurons
 n_hidden_2 = 256  # 2nd layer number of neurons
-num_input = 784  # MNIST data input (img shape: 28*28)
-num_classes = 3  # MNIST total classes (0-9 digits)
+num_input = 5000  # MNIST data input (img shape: 28*28)
+num_classes = 2  # MNIST total classes (0-9 digits)
+
+data_folder_path = "/media/david/Elements/David/deep/final_data/labelled/"
+
+data = None
+
+files = os.listdir(data_folder_path)
+#counter = 0
+for file in files:
+    #if counter > 3:
+   #     break
+    data_batch = np.load(data_folder_path + file)
+    if data is None:
+        data = data_batch
+    else:
+        data = np.concatenate([data, data_batch])
+    #counter += 1
+
+
+def next_mini_batch(data_list):
+    while True:
+        for i in range(len(data)//minibatch_size):
+            minibatch = data_list[i * minibatch_size:(i + 1) * minibatch_size]
+            batch_x = None
+            batch_y = None
+            for sample in minibatch:
+                sample_x = sample[0]
+                offset = random.randint(0, 149)
+                flat_and_cut_sample_x = np.reshape(sample_x[offset:frame_cutoff + offset, :],
+                                                 [1, frame_cutoff * sample_x.shape[1]])
+                if batch_x is None:
+                    batch_x = flat_and_cut_sample_x
+                else:
+                    batch_x = np.concatenate([batch_x, flat_and_cut_sample_x])
+
+                sample_y = np.reshape(sample[1], [1, 2])
+                if batch_y is None:
+                    batch_y = sample_y
+                else:
+                    batch_y = np.concatenate([batch_y, sample_y])
+
+            yield batch_x, batch_y
+        print("looped")
+
 
 # tf Graph input
 X = tf.placeholder("float", [None, num_input])
@@ -79,13 +115,14 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 init = tf.global_variables_initializer()
 
 # Start training
+generator = next_mini_batch(data)
 with tf.Session() as sess:
 
     # Run the initializer
     sess.run(init)
 
     for step in range(1, num_steps+1):
-        batch_x, batch_y = mnist.train.next_batch(batch_size)
+        batch_x, batch_y = next(generator)
         # Run optimization op (backprop)
         sess.run(train_op, feed_dict={X: batch_x, Y: batch_y})
         if step % display_step == 0 or step == 1:
@@ -98,7 +135,9 @@ with tf.Session() as sess:
 
     print("Optimization Finished!")
 
+"""
     # Calculate accuracy for MNIST test images
     print("Testing Accuracy:", \
         sess.run(accuracy, feed_dict={X: mnist.test.images,
 Y: mnist.test.labels}))
+"""
