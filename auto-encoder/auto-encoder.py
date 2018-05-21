@@ -2,7 +2,11 @@ import tensorflow as tf
 import numpy as np
 import math
 
-speechT_output_folder_path = "/media/david/Elements/David/deep/speechT-output/"
+# tf.set_random_seed(3000)
+# np.random.seed(3000)
+
+
+speechT_output_folder_path = "/media/karl/Elements/DeepLearningProject/VoxForge/speechT-output/"
 
 
 def get_batch_no_nan(languages=None):
@@ -38,7 +42,10 @@ validation_set = next(data_generator)[0:125, :, :]
 for j in range(1):
     validation_set = np.concatenate([validation_set, next(data_generator)[0:125, :, :]])
 
+<<<<<<< e390fe147b810a8048ea89606803f317c52bf363
 # normalize
+=======
+>>>>>>> Added trained auto-encoder model and a batch auto-encoder
 mean_and_std = np.zeros([dataset.shape[2], 2])
 
 for i in range(dataset.shape[2]):
@@ -65,15 +72,8 @@ dataset_std = np.std(dataset)
 print(dataset_mean)
 print(dataset_std)
 
-# dataset -= dataset_mean
-# dataset /= dataset_std
-
 print(np.mean(validation_set))
 print(np.std(validation_set))
-
-
-# validation_set -= dataset_mean
-# validation_set /= dataset_std
 
 def split_indicies(index):
     return index // dataset.shape[1], index % dataset.shape[1]
@@ -107,12 +107,12 @@ def format_validation_set(validation_set):
 validation_set = format_validation_set(validation_set)
 print(validation_set.shape)
 
-tf.set_random_seed(1000)
+
 
 # Training Parameters
 learning_rate = 0.0001
 learning_rate_place_holder = tf.placeholder(tf.float32, shape=[], name="learning_rate_place_holder")
-num_steps = 1000000
+num_steps = 2000000
 batch_size = 250
 
 display_step = 1000
@@ -189,7 +189,8 @@ saver = tf.train.Saver()
 
 best_known_loss = 1000
 
-weights = None
+training_log = np.zeros(num_steps+1, 3)
+
 # Start Training
 # Start a new TF session
 with tf.Session() as sess:
@@ -202,29 +203,40 @@ with tf.Session() as sess:
     print("Initial validation loss: " + str(np.sqrt(validation_loss)))
     best_known_loss = np.sqrt(validation_loss)
 
+    steps_since_improvement = 0
+
     # Training
     for i in range(1, num_steps + 1):
         # Prepare Data
         # Get the next batch of MNIST data (only images are needed, not labels)
         batch_x = get_next_batch(batch_size)
 
-        learning_rate = learning_rate * 0.99999
+        if i < 500000:
+            learning_rate = learning_rate * 0.99999
+        elif steps_since_improvement >= 10:
+            learning_rate = learning_rate * 0.1
+            steps_since_improvement = 0
 
         # Run optimization op (backprop) and cost op (to get loss value)
         _, l = sess.run([optimizer, loss], feed_dict={X: batch_x, learning_rate_place_holder: learning_rate})
         # Display logs per step
         if i % display_step == 0 or i == 1:
+
             print('Step %i: Minibatch Loss: %f' % (i, np.sqrt(l)))
             validation_loss = sess.run(loss, feed_dict={X: validation_set})
             print("val loss: " + str(np.sqrt(validation_loss)))
             print("Best known loss: " + str(best_known_loss))
+
+            training_log[i//1000, :] = [l, validation_loss, learning_rate]
+
             if np.sqrt(validation_loss) < best_known_loss:
+                steps_since_improvement = 0
                 best_known_loss = np.sqrt(validation_loss)
                 model_name = "auto-enc-" + str(i) + "-" + ("{0:.4f}".format(np.sqrt(validation_loss))).split('.')[1]
                 save_path = saver.save(sess,
-                                       "/media/karl/Elements/DeepLearningProject/auto-encoder/" + model_name + "/auto-enc.ckpt")
+                                   "/media/karl/Elements/DeepLearningProject/auto-encoder/" + model_name + "/auto-enc.ckpt")
                 print("Model saved in path: %s" % save_path)
-
+                #6091, 104
                 input_array = np.reshape(dataset[0, 100, :], (1, 250))
                 decoded = sess.run(decoder, feed_dict={X: input_array})
 
@@ -234,7 +246,10 @@ with tf.Session() as sess:
                 print(decoded[0, 0:15])
                 print("Diff:")
                 print(decoded[0, 0:15] - input_array[0, 0:15])
+            else:
+                steps_since_improvement += 1
 
 
-    validation_loss = sess.run([loss], feed_dict={X: validation_set})
+    validation_loss = sess.run(loss, feed_dict={X: validation_set})
     print("Final validation loss: " + str(np.sqrt(validation_loss)))
+    np.save('training-log.npy', training_log)
