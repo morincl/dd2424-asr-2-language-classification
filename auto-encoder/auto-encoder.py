@@ -38,12 +38,9 @@ validation_set = next(data_generator)[0:125, :, :]
 for j in range(1):
     validation_set = np.concatenate([validation_set, next(data_generator)[0:125, :, :]])
 
-<<<<<<< 4d7ec292fe136e25e399f2bced7930a46b9c05b0
 # normalize
-=======
 mean_and_std = np.zeros([dataset.shape[2], 2])
 
->>>>>>> checked in conversion commands and removed mean from auto-encoder normalization
 for i in range(dataset.shape[2]):
     #mean = np.mean(dataset[:,:,i])
     mean = 0
