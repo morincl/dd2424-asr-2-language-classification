@@ -13,6 +13,8 @@ import os
 import random
 
 frame_cutoff = 100 # How many frames to use per sample
+random_seed = None  # Set this to any number to make random the same all the time (good for parameter optimization)
+# tf.set_random_seed(1)  # Uncomment to make tf use same random seed
 
 # Parameters
 learning_rate = 0.1
@@ -24,7 +26,7 @@ num_validation_set_minibatches = 10
 # Network Parameters
 n_hidden_1 = 256  # 1st layer number of neurons
 n_hidden_2 = 256  # 2nd layer number of neurons
-num_input = frame_cutoff * 50  # frame_cutoff frames * 50 elments per frame
+num_input = frame_cutoff * 50  # frame_cutoff frames * 50 elements per frame
 num_classes = 2  # English or French
 
 training_data_folder_path = "/media/karl/Elements/DeepLearningProject/VoxForge/dataset/labelled/training/"
@@ -41,6 +43,7 @@ def load_data(input_path):
         else:
             data = np.concatenate([data, data_batch])
     return data
+
 
 def next_mini_batch(data_list, epoch_callback=None):
     while True:
@@ -99,6 +102,7 @@ def neural_net(x):
     out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
     return out_layer
 
+
 # Construct model
 logits = neural_net(X)
 prediction = tf.nn.softmax(logits)
@@ -117,10 +121,11 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 init = tf.global_variables_initializer()
 
 # Build validation set
+# Set seed=1 to always use the same seed for validation
+random.seed(1)
 
 validation_set_x = None
 validation_set_y = None
-
 validation_generator = next_mini_batch(validation_data)
 for i in range(num_validation_set_minibatches):
     batch_x, batch_y = next(validation_generator)
@@ -130,7 +135,9 @@ for i in range(num_validation_set_minibatches):
     else:
         validation_set_x = batch_x
         validation_set_y = batch_y
-import pdb; pdb.set_trace()
+# remove seed (or change to what was used before)
+random.seed(random_seed)
+
 # Start training
 training_generator = next_mini_batch(training_data)
 with tf.Session() as sess:
