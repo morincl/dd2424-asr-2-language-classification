@@ -13,20 +13,18 @@ import os
 import random
 
 frame_cutoff = 100 # How many frames to use per sample
-random_seed = None  # Set this to any number to make random the same all the time (good for parameter optimization)
-# tf.set_random_seed(1)  # Uncomment to make tf use same random seed
 
 # Parameters
-learning_rate = 0.1
-num_steps = 1000
+learning_rate = 0.0001
+num_steps = 2000
 minibatch_size = 128
 display_step = 100
 num_validation_set_minibatches = 10
 
 # Network Parameters
-n_hidden_1 = 256  # 1st layer number of neurons
-n_hidden_2 = 256  # 2nd layer number of neurons
-num_input = frame_cutoff * 50  # frame_cutoff frames * 50 elements per frame
+num_hidden_1 = 256  # 1st layer number of neurons
+num_hidden_2 = 256  # 2nd layer number of neurons
+num_input = frame_cutoff * 50  # frame_cutoff frames * 50 elments per frame
 num_classes = 2  # English or French
 
 training_data_folder_path = "/media/karl/Elements/DeepLearningProject/VoxForge/dataset/labelled/training/"
@@ -43,7 +41,6 @@ def load_data(input_path):
         else:
             data = np.concatenate([data, data_batch])
     return data
-
 
 def next_mini_batch(data_list, epoch_callback=None):
     while True:
@@ -71,7 +68,6 @@ def next_mini_batch(data_list, epoch_callback=None):
         if epoch_callback is not None:
             epoch_callback()
 
-
 training_data = load_data(training_data_folder_path)
 validation_data = load_data(validation_data_folder_path)
 
@@ -79,39 +75,36 @@ validation_data = load_data(validation_data_folder_path)
 X = tf.placeholder("float", [None, num_input])
 Y = tf.placeholder("float", [None, num_classes])
 
-# Store layers weight & bias
-weights = {
-    'h1': tf.Variable(tf.random_normal([num_input, n_hidden_1])),
-    'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-    'out': tf.Variable(tf.random_normal([n_hidden_2, num_classes]))
-}
-biases = {
-    'b1': tf.Variable(tf.random_normal([n_hidden_1])),
-    'b2': tf.Variable(tf.random_normal([n_hidden_2])),
-    'out': tf.Variable(tf.random_normal([num_classes]))
-}
-
-
 # Create model
 def neural_net(x):
-    # Hidden fully connected layer with 256 neurons
-    layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
-    # Hidden fully connected layer with 256 neurons
-    layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
-    # Output fully connected layer with a neuron for each class
-    out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
-    return out_layer
+    hidden_1 = tf.layers.dense(inputs=x,
+                               units=num_hidden_1,
+                               activation=tf.nn.leaky_relu,
+                               kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                               use_bias=False)
 
+    hidden_2 = tf.layers.dense(inputs=hidden_1,
+                               units=num_hidden_2,
+                               activation=tf.nn.leaky_relu,
+                               kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                               use_bias=False)
+
+    logits = tf.layers.dense(inputs=hidden_2,
+                               units=num_classes,
+                               activation=tf.nn.leaky_relu,
+                               kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                               use_bias=False, name="logits")
+    return logits
 
 # Construct model
 logits = neural_net(X)
-prediction = tf.nn.softmax(logits)
+prediction = tf.nn.softmax(logits, name="prediction")
 
 # Define loss and optimizer
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
     logits=logits, labels=Y))
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-train_op = optimizer.minimize(loss_op)
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, name="adam_op")
+train_op = optimizer.minimize(loss_op, name="optimizer_op")
 
 # Evaluate model
 correct_pred = tf.equal(tf.argmax(prediction, 1), tf.argmax(Y, 1))
@@ -121,11 +114,10 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 init = tf.global_variables_initializer()
 
 # Build validation set
-# Set seed=1 to always use the same seed for validation
-random.seed(1)
 
 validation_set_x = None
 validation_set_y = None
+
 validation_generator = next_mini_batch(validation_data)
 for i in range(num_validation_set_minibatches):
     batch_x, batch_y = next(validation_generator)
@@ -135,8 +127,6 @@ for i in range(num_validation_set_minibatches):
     else:
         validation_set_x = batch_x
         validation_set_y = batch_y
-# remove seed (or change to what was used before)
-random.seed(random_seed)
 
 # Start training
 training_generator = next_mini_batch(training_data)
