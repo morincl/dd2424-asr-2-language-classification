@@ -42,10 +42,7 @@ validation_set = next(data_generator)[0:125, :, :]
 for j in range(1):
     validation_set = np.concatenate([validation_set, next(data_generator)[0:125, :, :]])
 
-<<<<<<< e390fe147b810a8048ea89606803f317c52bf363
 # normalize
-=======
->>>>>>> Added trained auto-encoder model and a batch auto-encoder
 mean_and_std = np.zeros([dataset.shape[2], 2])
 
 for i in range(dataset.shape[2]):
