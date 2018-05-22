@@ -19,17 +19,22 @@ frame_cutoff = 100 # How many frames to use per sample
 random_seed = None  # Set this to any number to make random the same all the time (good for parameter optimization)
 # tf.set_random_seed(1)  # Uncomment to make tf use same random seed
 
+pre_trained_model_path = "/media/karl/Elements/DeepLearningProject/dnn/pre-trained-8922/"
+
 # Parameters
 learning_rate = 0.0001
-num_steps = 2000
+learning_rate_place_holder = tf.placeholder(tf.float32, shape=[], name="learning_rate_place_holder")
+num_steps = 100000
 minibatch_size = 128
 display_step = 100
 num_validation_set_minibatches = 10
 
 # Network Parameters
-num_hidden_1 = 256  # 1st layer number of neurons
-num_hidden_2 = 256  # 2nd layer number of neurons
 num_input = frame_cutoff * 50  # frame_cutoff frames * 50 elments per frame
+num_hidden_1 = 2000  # 1st layer number of neurons
+num_hidden_2 = 250  # 2nd layer number of neurons
+num_hidden_3 = 100  # 3rd layer number of neurons
+num_hidden_4 = 100  # 4th layer number of neurons
 num_classes = 2  # English or French
 
 training_data_folder_path = "/media/karl/Elements/DeepLearningProject/VoxForge/dataset/labelled/training/"
@@ -94,8 +99,19 @@ def neural_net(x):
                                activation=tf.nn.leaky_relu,
                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                use_bias=False)
+    hidden_3 = tf.layers.dense(inputs=hidden_2,
+                               units=num_hidden_3,
+                               activation=tf.nn.leaky_relu,
+                               kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                               use_bias=False)
 
-    logits = tf.layers.dense(inputs=hidden_2,
+    hidden_4 = tf.layers.dense(inputs=hidden_3,
+                               units=num_hidden_4,
+                               activation=tf.nn.leaky_relu,
+                               kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                               use_bias=False)
+
+    logits = tf.layers.dense(inputs=hidden_4,
                                units=num_classes,
                                activation=tf.nn.leaky_relu,
                                kernel_initializer=tf.contrib.layers.xavier_initializer(),
@@ -110,7 +126,7 @@ prediction = tf.nn.softmax(logits, name="prediction")
 # Define loss and optimizer
 loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
     logits=logits, labels=Y))
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, name="adam_op")
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate_place_holder, name="adam_op")
 train_op = optimizer.minimize(loss_op, name="optimizer_op")
 
 # Evaluate model
@@ -138,17 +154,25 @@ for i in range(num_validation_set_minibatches):
 # remove seed (or change to what was used before)
 random.seed(random_seed)
 
+best_known_acc = 0
+
+saver = tf.train.Saver()
+
 # Start training
 training_generator = next_mini_batch(training_data)
 with tf.Session() as sess:
-
     # Run the initializer
     sess.run(init)
+    import pdb; pdb.set_trace()
+    if pre_trained_model_path is not None:
+        saver.restore(sess, tf.train.latest_checkpoint(pre_trained_model_path))
+        print("Model restored.")
 
     for step in range(1, num_steps+1):
+
+        learning_rate = learning_rate * 0.99995
         batch_x, batch_y = next(training_generator)
-        # Run optimization op (backprop)
-        sess.run(train_op, feed_dict={X: batch_x, Y: batch_y})
+        sess.run(train_op, feed_dict={X: batch_x, Y: batch_y, learning_rate_place_holder: learning_rate})
         if step % display_step == 0 or step == 1:
             # Calculate batch loss and accuracy
             loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
@@ -163,8 +187,14 @@ with tf.Session() as sess:
             thresh = interp1d(fpr, thresholds)(eer)
             print("Step " + str(step) + ", Minibatch Loss= " + \
                   "{:.4f}".format(loss) + ", Training Accuracy= " + \
-                  "{:.3f}".format(acc) + ", Validation Loss= " + \
+                  "{:.4f}".format(acc) + ", Validation Loss= " + \
                   "{:.4f}".format(val_loss) + ", Validation Accuracy= " + \
-                  "{:.3f}".format(val_acc) + ", EER= " + \
+                  "{:.4f}".format(val_acc) + ", EER= " + \
                   "{:.4f}".format(eer))
+
+            if val_acc > best_known_acc:
+                best_known_acc = val_acc
+                model_name = "dnn-" + str(step) + "-" + ("{0:.4f}".format(val_acc)).split('.')[1]
+                save_path = saver.save(sess, "/media/karl/Elements/DeepLearningProject/dnn/" + model_name + "/dnn.ckpt")
+
     print("Optimization Finished!")
