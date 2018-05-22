@@ -11,6 +11,9 @@ import tensorflow as tf
 import numpy as np
 import os
 import random
+from scipy.optimize import brentq
+from scipy.interpolate import interp1d
+from sklearn.metrics import roc_curve
 
 frame_cutoff = 100 # How many frames to use per sample
 random_seed = None  # Set this to any number to make random the same all the time (good for parameter optimization)
@@ -151,11 +154,17 @@ with tf.Session() as sess:
             loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x,
                                                                  Y: batch_y})
 
-            val_loss, val_acc = sess.run([loss_op, accuracy], feed_dict={X: validation_set_x,
+            val_loss, val_acc, val_score = sess.run([loss_op, accuracy, prediction], feed_dict={X: validation_set_x,
                                                                          Y: validation_set_y})
+
+            fpr, tpr, thresholds = roc_curve(validation_set_y[:, 0], val_score[:, 0], pos_label=1)
+
+            eer = brentq(lambda x: 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
+            thresh = interp1d(fpr, thresholds)(eer)
             print("Step " + str(step) + ", Minibatch Loss= " + \
                   "{:.4f}".format(loss) + ", Training Accuracy= " + \
                   "{:.3f}".format(acc) + ", Validation Loss= " + \
                   "{:.4f}".format(val_loss) + ", Validation Accuracy= " + \
-                  "{:.3f}".format(val_acc))
+                  "{:.3f}".format(val_acc) + ", EER= " + \
+                  "{:.4f}".format(eer))
     print("Optimization Finished!")
