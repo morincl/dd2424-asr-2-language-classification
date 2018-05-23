@@ -13,7 +13,7 @@ languages = {"English": np.asarray([1, 0]),
              }
 data = []
 
-number_of_batches = len(os.listdir(input_data_folder_path + "French"))
+number_of_batches = 17
 
 for language in languages:
     files = os.listdir(input_data_folder_path + language)
@@ -21,7 +21,7 @@ for language in languages:
         print("Processing batch {} of {}".format(i, language))
         data_batch = np.load(input_data_folder_path + language + "/" + files[i])
         for sample_index in range(data_batch.shape[0]):
-            data.append([data_batch[sample_index, :, :], languages[language]])
+            data.append([data_batch[sample_index], languages[language]])
 
 data = np.asarray(data)
 np.random.shuffle(data)

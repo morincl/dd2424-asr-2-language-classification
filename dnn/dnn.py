@@ -40,6 +40,8 @@ num_classes = 2  # English or French
 training_data_folder_path = "/media/karl/Elements/DeepLearningProject/VoxForge/dataset/labelled/training/"
 validation_data_folder_path = "/media/karl/Elements/DeepLearningProject/VoxForge/dataset/labelled/validation/"
 
+test_data_folder_path = "/media/karl/Elements/DeepLearningProject/VoxForge/dataset/labelled/test/"
+
 
 def load_data(input_path):
     files = os.listdir(input_path)
@@ -81,6 +83,7 @@ def next_mini_batch(data_list, epoch_callback=None):
 
 training_data = load_data(training_data_folder_path)
 validation_data = load_data(validation_data_folder_path)
+test_data = load_data(test_data_folder_path)
 
 # tf Graph input
 X = tf.placeholder("float", [None, num_input])
@@ -151,6 +154,19 @@ for i in range(num_validation_set_minibatches):
     else:
         validation_set_x = batch_x
         validation_set_y = batch_y
+
+test_set_x = None
+test_set_y = None
+test_generator = next_mini_batch(test_data)
+for i in range(8): # uses the complete test set
+    batch_x, batch_y = next(test_generator)
+    if test_set_x is not None:
+        test_set_x = np.concatenate([test_set_x, batch_x])
+        test_set_y = np.concatenate([test_set_y, batch_y])
+    else:
+        test_set_x = batch_x
+        test_set_y = batch_y
+
 # remove seed (or change to what was used before)
 random.seed(random_seed)
 
@@ -163,10 +179,32 @@ training_generator = next_mini_batch(training_data)
 with tf.Session() as sess:
     # Run the initializer
     sess.run(init)
-    import pdb; pdb.set_trace()
+
     if pre_trained_model_path is not None:
         saver.restore(sess, tf.train.latest_checkpoint(pre_trained_model_path))
         print("Model restored.")
+
+    loss, acc = sess.run([loss_op, accuracy], feed_dict={X: batch_x, Y: batch_y})
+    val_loss, val_acc, val_score = sess.run([loss_op, accuracy, prediction], feed_dict={X: validation_set_x, Y: validation_set_y})
+    fpr, tpr, thresholds = roc_curve(validation_set_y[:, 0], val_score[:, 0], pos_label=1)
+
+    eer = brentq(lambda x: 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
+    thresh = interp1d(fpr, thresholds)(eer)
+
+    print("Initial State, Minibatch Loss= " + \
+          "{:.4f}".format(loss) + ", Training Accuracy= " + \
+          "{:.3f}".format(acc) + ", Validation Loss= " + \
+          "{:.4f}".format(val_loss) + ", Validation Accuracy= " + \
+          "{:.3f}".format(val_acc) + ", EER= " + \
+          "{:.4f}".format(eer))
+
+    test_loss, test_acc, test_score = sess.run([loss_op, accuracy, prediction], feed_dict={X: test_set_x, Y: test_set_y})
+    fpr, tpr, thresholds = roc_curve(test_set_y[:, 0], test_score[:, 0], pos_label=1)
+
+    eer = brentq(lambda x: 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
+    thresh = interp1d(fpr, thresholds)(eer)
+
+    print("Test EER = " + "{:.4f}".format(eer))
 
     for step in range(1, num_steps+1):
 
